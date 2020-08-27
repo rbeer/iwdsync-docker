@@ -29,6 +29,21 @@ function print_init_steps {
   echo -e "----------------------------------------"
 }
 
+function print_banner_border {
+  printf '#%.0s' `seq $1`; printf '\n'
+}
+
+function print_banner {
+  local TITLE="$1 $2"
+  local TITLE_LENGTH=${#TITLE}
+  local DIVIDER_LENGTH=$(($TITLE_LENGTH + 4))
+
+  echo ""
+  print_banner_border $DIVIDER_LENGTH
+  echo "# $TITLE"
+  print_banner_border $DIVIDER_LENGTH
+}
+
 ###
 # 'mkcert' <DOMAIN>
 ###
@@ -81,7 +96,6 @@ function check_docker_version {
   local DOCKER_VERSION_MAJOR=$((${DOCKER_VERSION:0:2}))
   local DOCKER_VERSION_MINOR=$((${DOCKER_VERSION:3:2}))
 
-  echo "Docker versions"
   echo "  Required: $MIN_VERSION"
   echo "  Installed: $DOCKER_VERSION"
 
@@ -138,12 +152,23 @@ if [ "$1" == "mkcert" ]; then
   exit 0
 elif [ "$1" == "init" ]; then
   print_init_steps
+
+  print_banner "0.1" "Checking parent directory"
   check_empty_parent
+
+  print_banner "0.2" "Checking Docker version"
   check_docker_version
 
+  print_banner "1" "Cloning API"
   init_api_repo
+
+  print_banner "2" "Cloning PWA"
   init_pwa_repo
+
+  print_banner "3" "Building images"
   build_images
+
+  print_banner "4" "Creating SSL certificate for iwdlive.dev"
   make_certificate "iwdlive.dev" "init"
   exit 0
 fi
