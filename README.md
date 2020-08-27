@@ -62,6 +62,9 @@ mkcert \
   -key-file ./www/ssl/iwdlive.dev/key.pem \
   -cert-file ./www/ssl/iwdlive.dev/cert.pem \
   iwdlive.dev *.iwdlive.dev
+
+# or use ./manage
+./manage mkcert iwdlive.dev
 ```
 
 The server is already set up for `iwdlive.dev`. The next section describes how
@@ -79,6 +82,19 @@ Start with generating the SSL cert and key
 
 The path `./www/ssl` is mounted to `/etc/nginx/ssl` and
 can be referenced in configs relative to `/etc/nginx`.
+
+For our example:
+
+```bash
+# The certificate you just created...
+<project_root>/docker/www/ssl/streamsync.dev/cert.pem
+
+# is mounted inside the container...
+/etc/nginx/ssl/streamsync.dev/cert.pem
+
+# and can be used in host configs with a relative path
+ssl_certificate ssl/streamsync.dev/cert.pem;
+```
 
 Now copy `./www/sites-enabled/iwdlive.dev` to `./www/sites-enabled/streamsync.dev`
 and change the paths to `ssl_certificate` and `_key`, as well as `$DOMAIN` and `$server_name`.

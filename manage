@@ -1,5 +1,36 @@
 #/usr/bin/env bash
 
+# use experimental BuildKit to enable
+# --mount at RUN in Dockerfiles, enabling
+# caching of pip packages
+#  !! Requires Docker v18.09 or later
+export DOCKER_BUILDKIT=1
+export COMPOSE_DOCKER_CLI_BUILD=1
+
+API_REPO_PATH="../iwdsync-backend"
+API_REPO_GIT_DIR="$API_REPO_PATH/.git"
+API_REPO_REMOTE="../../stream-sync/iwdsync-backend/.git"
+
+PWA_REPO_PATH="../iwdsync"
+PWA_REPO_GIT_DIR="$PWA_REPO_PATH/.git"
+PWA_REPO_REMOTE="../../stream-sync/iwdsync/.git"
+
+GIT_BRANCH="docker-dev"
+BUILD_IMAGE_FOR="api pwa www"
+
+function print_init_steps {
+  echo "--- iwdlive docker development setup ---"
+  echo "This script will"
+  echo "  0. Make sure you run all the right versions"
+  echo "  1. Clone the API service ($GIT_BRANCH branch) to $API_REPO_PATH"
+  echo "  2. Clone the PWA service ($GIT_BRANCH branch) to $PWA_REPO_PATH"
+  echo "  3. Build the images for [$BUILD_IMAGE_FOR]"
+  echo -e "----------------------------------------"
+}
+
+###
+# 'mkcert' <DOMAIN>
+###
 function make_certificate() {
   local DOMAIN=$1
   local OUT_PATH=./www/ssl/$DOMAIN
@@ -12,16 +43,101 @@ function make_certificate() {
     $DOMAIN *.$DOMAIN
 }
 
+###
+# 'init' pre-run checks
+###
+
+function check_empty_parent {
+  local HAS_MISC_DIRS=0
+  for DIR_NAME in ".."/*; do
+    if [ $DIR_NAME != "../docker" ]; then
+      HAS_MISC_DIRS=1
+      break
+    fi
+  done
+
+  if [ $HAS_MISC_DIRS -eq 1 ]; then
+    echo "!! The parent directory is not empty."
+    read -p "Proceed with non-empty parent? [y/N] " USE_NON_EMPTY_PARENT
+    if [ "$USE_NON_EMPTY_PARENT" != "y" ]; then exit 0; fi
+  fi
+}
+
+function check_docker_version {
+  local CHECK_FAILED=0
+  local MIN_VERSION_MAJOR=18
+  local MIN_VERSION_MINOR=09
+  local MIN_VERSION="$MIN_VERSION_MAJOR.$MIN_VERSION_MINOR"
+
+  local DOCKER_VERSION=`docker version --format '{{.Server.Version}}'`
+  local DOCKER_VERSION_MAJOR=$((${DOCKER_VERSION:0:2}))
+  local DOCKER_VERSION_MINOR=$((${DOCKER_VERSION:3:2}))
+
+  echo "Docker versions"
+  echo "  Required: $MIN_VERSION"
+  echo "  Installed: $DOCKER_VERSION"
+
+  [ $DOCKER_VERSION_MAJOR -lt $MIN_VERSION_MAJOR ] && \
+    CHECK_FAILED=1
+
+  [ $DOCKER_VERSION_MAJOR -eq $MIN_VERSION_MAJOR ] && \
+    [ $DOCKER_VERSION_MINOR -lt $MIN_VERSION_MINOR ] && \
+      CHECK_FAILED=1
+
+  if [ $CHECK_FAILED -eq 1 ]; then
+
+    echo "!! Please upgrade to or install Docker v$MIN_VERSION or later!"
+    exit 1
+  fi
+  echo ""
+}
+
+###
+# 1. Clone the API service
+###
+function init_api_repo {
+  local GIT_DIR_PATH_ABSOLUTE=`realpath $API_REPO_GIT_DIR 2> /dev/null`
+  GIT_DIR=$GIT_DIR_PATH_ABSOLUTE git branch &> /dev/null
+  if [[ $? == 0 && $GIT_DIR_PATH_ABSOLUTE != "" ]]; then
+    echo "API repo already present at $GIT_DIR_PATH_ABSOLUTE"
+  else
+    git clone --single-branch -b $GIT_BRANCH $API_REPO_REMOTE $API_REPO_PATH
+  fi
+}
+
+###
+# 2. Clone the PWA service
+###
+function init_pwa_repo {
+  local GIT_DIR_PATH_ABSOLUTE=`realpath $PWA_REPO_GIT_DIR 2> /dev/null`
+  GIT_DIR=$GIT_DIR_PATH_ABSOLUTE git branch &> /dev/null
+  if [[ $? == 0 && $GIT_DIR_PATH_ABSOLUTE != "" ]]; then
+    echo "PWA repo already present at $GIT_DIR_PATH_ABSOLUTE"
+  else
+    git clone --single-branch -b $GIT_BRANCH $PWA_REPO_REMOTE $PWA_REPO_PATH
+  fi
+}
+
+###
+# 3. Build the images for $BUILD_IMAGE_FOR
+###
+function build_images {
+  docker-compose -f iwdlive-dev_postgres_www.yml build $BUILD_IMAGE_FOR
+}
+
 if [ "$1" == "mkcert" ]; then
   [ "$2" == "" ] && echo "Please provide a domain name for the certificate!" && exit 1
   make_certificate $2
   exit 0
+elif [ "$1" == "init" ]; then
+  print_init_steps
+  check_empty_parent
+  check_docker_version
+
+  init_api_repo
+  init_pwa_repo
+  build_images
+  exit 0
 fi
 
-# use experimental BuildKit to enable
-# --mount at RUN in Dockerfiles, enabling
-# caching of pip packages
-export DOCKER_BUILDKIT=1
-export COMPOSE_DOCKER_CLI_BUILD=1
-
-DOCKER_BUILDKIT=1 docker-compose -f iwdlive-dev_postgres_www.yml $@
+docker-compose -f iwdlive-dev_postgres_www.yml $@
