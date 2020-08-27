@@ -25,6 +25,7 @@ function print_init_steps {
   echo "  1. Clone the API service ($GIT_BRANCH branch) to $API_REPO_PATH"
   echo "  2. Clone the PWA service ($GIT_BRANCH branch) to $PWA_REPO_PATH"
   echo "  3. Build the images for [$BUILD_IMAGE_FOR]"
+  echo "  4. Create the certificate for iwdlive.dev (when mkcert is installed!)"
   echo -e "----------------------------------------"
 }
 
@@ -32,6 +33,13 @@ function print_init_steps {
 # 'mkcert' <DOMAIN>
 ###
 function make_certificate() {
+  which mkcert &> /dev/null
+  if [ $? -ne 0 ]; then
+    echo "You need mkcert for certificate management!"
+    echo "Download from: https://github.com/FiloSottile/mkcert"
+    [ "$2" != "init" ] && exit 1
+  fi
+
   local DOMAIN=$1
   local OUT_PATH=./www/ssl/$DOMAIN
 
@@ -85,7 +93,6 @@ function check_docker_version {
       CHECK_FAILED=1
 
   if [ $CHECK_FAILED -eq 1 ]; then
-
     echo "!! Please upgrade to or install Docker v$MIN_VERSION or later!"
     exit 1
   fi
@@ -137,6 +144,7 @@ elif [ "$1" == "init" ]; then
   init_api_repo
   init_pwa_repo
   build_images
+  make_certificate "iwdlive.dev" "init"
   exit 0
 fi
 
