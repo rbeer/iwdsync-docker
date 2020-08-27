@@ -1,0 +1,10 @@
+db/data/**
+!db/data/.keep
+
+cache/**
+!cache/.keep
+
+redis/**
+!redis/.keep
+
+www/ssl/**

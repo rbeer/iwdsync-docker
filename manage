@@ -1,0 +1,27 @@
+#/usr/bin/env bash
+
+function make_certificate() {
+  local DOMAIN=$1
+  local OUT_PATH=./www/ssl/$DOMAIN
+
+  mkdir -p $OUT_PATH
+
+  mkcert \
+    -key-file $OUT_PATH/key.pem \
+    -cert-file $OUT_PATH/cert.pem \
+    $DOMAIN *.$DOMAIN
+}
+
+if [ "$1" == "mkcert" ]; then
+  [ "$2" == "" ] && echo "Please provide a domain name for the certificate!" && exit 1
+  make_certificate $2
+  exit 0
+fi
+
+# use experimental BuildKit to enable
+# --mount at RUN in Dockerfiles, enabling
+# caching of pip packages
+export DOCKER_BUILDKIT=1
+export COMPOSE_DOCKER_CLI_BUILD=1
+
+DOCKER_BUILDKIT=1 docker-compose -f iwdlive-dev_postgres_www.yml $@

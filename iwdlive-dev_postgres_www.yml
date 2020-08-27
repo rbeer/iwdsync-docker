@@ -1,0 +1,84 @@
+version: '3.5'
+services:
+  db:
+    image: postgres
+    container_name: iwdlive-db
+    hostname: idwlive-db
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - ./db/data:/var/lib/postgresql/data/
+    env_file:
+      - postgres.env
+    networks:
+      - common
+
+  redis:
+    image: redis:latest
+    container_name: iwdlive-redis
+    hostname: iwdlive-redis
+    expose:
+      - "6379"
+    volumes:
+      - ./redis:/data
+      - ./redis.conf:/usr/local/etc/redis/redis.conf
+    command: redis-server /usr/local/etc/redis/redis.conf
+    networks:
+      - common
+
+  www:
+    build: www/.
+    container_name: iwdlive-www
+    hostname: iwdlive-www
+    ports:
+      - "127.0.0.1:80:80"
+      - "127.0.0.1:443:443"
+    volumes:
+      # cache storage
+      - ./cache:/data/nginx/cache
+      # main config
+      - ./www/nginx.conf:/etc/nginx/nginx.conf
+      # site configs
+      - ./www/sites-enabled:/etc/nginx/sites-enabled
+      # document roots
+      - ./sites:/var/sites
+      # SSL certificates
+      - ./www/ssl:/etc/nginx/ssl
+      # log files
+      - ./logs/nginx:/var/log/nginx
+    networks:
+      - common
+
+  api:
+    build: ../iwdsync-backend/.
+    container_name: iwdlive-api
+    hostname: iwdlive-api
+    command: uvicorn iwdsync.asgi:application --reload --host iwdlive-api
+    stdin_open: true
+    expose:
+      - "8000"
+    volumes:
+      - ../iwdsync-backend:/app
+    env_file:
+      - ../iwdsync-backend/.env.docker
+    networks:
+      - common
+
+  pwa:
+    build: ../iwdsync/.
+    container_name: iwdlive-pwa
+    hostname: iwdlive-pwa
+    command: yarn dev
+    stdin_open: true
+    expose:
+      - "3000"
+    volumes:
+      - ../iwdsync:/app
+    env_file:
+      - ../iwdsync/.env.docker
+    networks:
+      - common
+
+networks:
+  common:
+    name: iwdlive-dev_common
