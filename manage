@@ -7,6 +7,8 @@
 export DOCKER_BUILDKIT=1
 export COMPOSE_DOCKER_CLI_BUILD=1
 
+COMPOSE_FILE="iwdlive-dev_postgres_www.yml"
+
 API_REPO_PATH="../iwdsync-backend"
 API_REPO_GIT_DIR="$API_REPO_PATH/.git"
 API_REPO_REMOTE="../../stream-sync/iwdsync-backend/.git"
@@ -14,17 +16,23 @@ API_REPO_REMOTE="../../stream-sync/iwdsync-backend/.git"
 PWA_REPO_PATH="../iwdsync"
 PWA_REPO_GIT_DIR="$PWA_REPO_PATH/.git"
 PWA_REPO_REMOTE="../../stream-sync/iwdsync/.git"
-
+# branch to check out when cloning API and PWA
 GIT_BRANCH="docker-dev"
+
+# Services to build images for
+# Essentially all services that have
+# a build: entry in the $COMPOSE_FILE
 BUILD_IMAGE_FOR="api pwa www"
+
+# Services to run detached, after successful init
+AUX_SERVICES="db redis www"
 
 function print_init_steps {
   echo "--- iwdlive docker development setup ---"
   echo "This script will"
-  echo "  0. Make sure you run all the right versions"
   echo "  1. Clone the API service ($GIT_BRANCH branch) to $API_REPO_PATH"
   echo "  2. Clone the PWA service ($GIT_BRANCH branch) to $PWA_REPO_PATH"
-  echo "  3. Build the images for [$BUILD_IMAGE_FOR]"
+  echo "  3. Build images ($BUILD_IMAGE_FOR)"
   echo "  4. Create the certificate for iwdlive.dev (when mkcert is installed!)"
   echo -e "----------------------------------------"
 }
@@ -67,8 +75,16 @@ function make_certificate() {
 }
 
 ###
-# 'init' pre-run checks
+# pre-run checks
 ###
+
+function check_docker_daemon {
+  docker ps &>/dev/null
+  if [ $? -ne 0 ]; then
+    echo "!! No Docker service running."
+    exit 1
+  fi
+}
 
 function check_empty_parent {
   local HAS_MISC_DIRS=0
@@ -143,8 +159,20 @@ function init_pwa_repo {
 # 3. Build the images for $BUILD_IMAGE_FOR
 ###
 function build_images {
-  docker-compose -f iwdlive-dev_postgres_www.yml build $BUILD_IMAGE_FOR
+  docker-compose -f $COMPOSE_FILE build $BUILD_IMAGE_FOR
 }
+
+###
+# Bring up services detached
+###
+function up_d_services {
+  docker-compose -f $COMPOSE_FILE up -d $1
+}
+
+###
+# iwdlive ./manage
+###
+check_docker_daemon
 
 if [ "$1" == "mkcert" ]; then
   [ "$2" == "" ] && echo "Please provide a domain name for the certificate!" && exit 1
@@ -153,10 +181,10 @@ if [ "$1" == "mkcert" ]; then
 elif [ "$1" == "init" ]; then
   print_init_steps
 
-  print_banner "0.1" "Checking parent directory"
+  print_banner "?" "Checking parent directory"
   check_empty_parent
 
-  print_banner "0.2" "Checking Docker version"
+  print_banner "?" "Checking Docker version"
   check_docker_version
 
   print_banner "1" "Cloning API"
@@ -170,7 +198,12 @@ elif [ "$1" == "init" ]; then
 
   print_banner "4" "Creating SSL certificate for iwdlive.dev"
   make_certificate "iwdlive.dev" "init"
+
+  print_banner "~" "Bringing up auxiliary services ($AUX_SERVICES)"
+  up_d_services "$AUX_SERVICES"
+
+  print_banner "\\0/" "Done"
   exit 0
 fi
 
-docker-compose -f iwdlive-dev_postgres_www.yml $@
+docker-compose -f $COMPOSE_FILE $@
