@@ -170,6 +170,13 @@ function up_d_services {
 }
 
 ###
+# Run migrations in API container
+###
+function run_api_migrate {
+  docker-compose -f $COMPOSE_FILE run api python ./manage.py migrate
+}
+
+###
 # iwdlive ./manage
 ###
 check_docker_daemon
@@ -201,6 +208,8 @@ elif [ "$1" == "init" ]; then
 
   print_banner "~" "Bringing up auxiliary services ($AUX_SERVICES)"
   up_d_services "$AUX_SERVICES"
+
+  run_api_migrate
 
   print_banner "\\0/" "Done"
   exit 0
