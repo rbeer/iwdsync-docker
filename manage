@@ -30,6 +30,13 @@ AUX_SERVICES="db redis www"
 # REMEMBER to point this to 127.0.0.1 in your DNS or hosts file!
 CERT_DOMAIN="iwdlive.dev"
 
+# other settings
+COLOR_FG_CYAN="\e[38;5;159m"
+COLOR_FG_RED="\e[38;5;196m"
+COLOR_FG_YELLOW="\e[38;5;226m"
+COLOR_FG_GREEN="\e[38;5;46m"
+COLOR_RESET="\e[0m"
+
 function print_init_steps {
   echo "--- iwdlive docker development setup ---"
   echo "This script will"
@@ -37,6 +44,7 @@ function print_init_steps {
   echo "  2. Clone the PWA service ($GIT_BRANCH branch) to $PWA_REPO_PATH"
   echo "  3. Build images ($BUILD_IMAGE_FOR)"
   echo "  4. Create the certificate for $CERT_DOMAIN (requires mkcert)"
+  echo "  5. Migrate API db schemas"
   echo -e "----------------------------------------"
   read -p "Key to continue..."
 }
@@ -46,13 +54,13 @@ function print_banner_border {
 }
 
 function print_banner {
-  local TITLE="$1 $2"
+  local TITLE="$1 $COLOR_FG_CYAN$2$COLOR_RESET"
   local TITLE_LENGTH=${#TITLE}
   local DIVIDER_LENGTH=$(($TITLE_LENGTH + 4))
 
   echo ""
   print_banner_border $DIVIDER_LENGTH
-  echo "# $TITLE"
+  echo -e "# $TITLE"
   print_banner_border $DIVIDER_LENGTH
 }
 
@@ -85,7 +93,7 @@ function make_certificate() {
 function check_docker_daemon {
   docker ps &>/dev/null
   if [ $? -ne 0 ]; then
-    echo "!! No Docker service running."
+    print_error "No Docker service running."
     exit 1
   fi
 }
@@ -100,7 +108,7 @@ function check_empty_parent {
   done
 
   if [ $HAS_MISC_DIRS -eq 1 ]; then
-    echo "!! The parent directory is not empty."
+    print_warning "The parent directory is not empty."
     read -p "Proceed with non-empty parent? [y/N] " USE_NON_EMPTY_PARENT
     if [ "$USE_NON_EMPTY_PARENT" != "y" ]; then exit 0; fi
   fi
@@ -127,7 +135,7 @@ function check_docker_version {
       CHECK_FAILED=1
 
   if [ $CHECK_FAILED -eq 1 ]; then
-    echo "!! Please upgrade to or install Docker v$MIN_VERSION or later!"
+    print_error "Please upgrade to or install Docker v$MIN_VERSION or later!"
     exit 1
   fi
   echo ""
@@ -213,9 +221,10 @@ elif [ "$1" == "init" ]; then
   print_banner "~" "Bringing up auxiliary services ($AUX_SERVICES)"
   up_d_services "$AUX_SERVICES"
 
+  print_banner "5" "Migrating API schemas"
   run_api_migrate
 
-  print_banner "\\0/" "Done"
+  print_banner "\\\0/" "${COLOR_FG_GREEN}Done"
   echo "REMEMBER to point $CERT_DOMAIN to 127.0.0.1 in your DNS or hosts file!"
   echo "Use ./manage up (api|pwa) to start the dev servers and go to https://$CERT_DOMAIN"
   echo "Both dev servers reload on file changes in their respective repository:"
