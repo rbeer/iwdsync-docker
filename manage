@@ -45,6 +45,7 @@ function print_init_steps {
   echo "  3. Build images ($BUILD_IMAGE_FOR)"
   echo "  4. Create the certificate for $CERT_DOMAIN (requires mkcert)"
   echo "  5. Migrate API db schemas"
+  echo "  6. Create a django superuser"
   echo -e "----------------------------------------"
   read -p "Key to continue..."
 }
@@ -231,6 +232,13 @@ function run_api_migrate {
   bail_on_fail $? "API migrations"
 }
 
+function create_superuser {
+  echo "Use this user to log in at https://api.$CERT_DOMAIN/admin"
+  echo "Starting api container..."
+  docker-compose -f $COMPOSE_FILE run api python manage.py createsuperuser
+  bail_on_fail $? "superuser"
+}
+
 ###
 # iwdlive ./manage
 ###
@@ -272,9 +280,13 @@ elif [ "$1" == "init" ]; then
   print_banner "5" "Migrating API schemas"
   run_api_migrate
 
+  print_banner "6" "Create django superuser"
+  create_superuser
+
   print_banner "\\\0/" "${COLOR_FG_GREEN}Done"
-  echo "REMEMBER to point $CERT_DOMAIN to 127.0.0.1 in your DNS or hosts file!"
-  echo "Use ./manage up (api|pwa) to start the dev servers and go to https://$CERT_DOMAIN"
+  echo -e "\nREMEMBER to point $CERT_DOMAIN to 127.0.0.1 in your DNS or hosts file!\n"
+  echo "Use './manage up api' to start the api dev server and log in at https://api.$CERT_DOMAIN/admin to create a Caster."
+  echo "Then './manage up pwa' to start the React dev server; https://idwlive.dev/(viewer|caster)/{url_path}"
   echo "Both dev servers reload on file changes in their respective repository:"
   echo "  api: $API_REPO_PATH"
   echo "  pwa: $PWA_REPO_PATH"
