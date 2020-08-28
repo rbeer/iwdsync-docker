@@ -198,6 +198,31 @@ function up_d_services {
   bail_on_fail $? "auxiliary services"
 }
 
+function await_db {
+  local QUERY=1
+  local PG_READY_STATUS
+
+  while true; do
+    sleep $(($QUERY * 1))
+    echo -n "[$QUERY/∞] pg_ready: "
+    PG_READY_OUT=`docker-compose -f $COMPOSE_FILE exec db pg_isready 2>&1`
+    PG_READY_STATUS=${PG_READY_OUT:$((${#PG_READY_OUT} - 22)):21}
+    if [ "$PG_READY_STATUS" == "accepting connections" ]; then
+      echo $PG_READY_STATUS
+      break
+    else
+      PG_READY_STATUS=${PG_READY_OUT:0:18}
+      if [ "$PG_READY_STATUS" == "No container found" ]; then
+        print_error "The database container isn't running"
+      else
+        echo "no response"
+      fi
+      [ $QUERY -eq 10 ] && print_warning "This runs indefinitely, btw."
+      QUERY=$(($QUERY + 1))
+    fi
+  done
+}
+
 ###
 # Run migrations in API container
 ###
@@ -238,6 +263,11 @@ elif [ "$1" == "init" ]; then
 
   print_banner "~" "Bringing up auxiliary services ($AUX_SERVICES)"
   up_d_services "$AUX_SERVICES"
+
+  # docker reports success as soon as
+  # a container is running, but we have to
+  # wait for the DB to accept connections
+  await_db
 
   print_banner "5" "Migrating API schemas"
   run_api_migrate
