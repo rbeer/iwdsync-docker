@@ -11,11 +11,11 @@ COMPOSE_FILE="iwdlive-dev_postgres_www.yml"
 
 API_REPO_PATH="../iwdsync-backend"
 API_REPO_GIT_DIR="$API_REPO_PATH/.git"
-API_REPO_REMOTE="../../stream-sync/iwdsync-backend/.git"
+API_REPO_REMOTE="https://github.com/rbeer/iwdsync-backend.git"
 
 PWA_REPO_PATH="../iwdsync"
 PWA_REPO_GIT_DIR="$PWA_REPO_PATH/.git"
-PWA_REPO_REMOTE="../../stream-sync/iwdsync/.git"
+PWA_REPO_REMOTE="https://github.com/rbeer/iwdsync.git"
 # branch to check out when cloning API and PWA
 GIT_BRANCH="docker-dev"
 
