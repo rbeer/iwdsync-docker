@@ -1,41 +1,51 @@
 # iwdlive.dev
 
-The compose file `./idwlive-dev_postgres_www.yml` creates a common
-network (`iwdlive-dev_common`) with postgres (`db`), nginx (`www`), frontend (`pwa`) and backend (`api`) containers.
+***Quickstart:***
+*[Install mkcert](https://github.com/FiloSottile/mkcert#installation) and run `./manage init`*
 
-## Postgres (db)
-- Standard image (postgres) used.
-- Opens port 5432 for 127.0.0.1
-- Reads config from ./postgres.env
-- Stores data to ./db/data/
+---
+The compose file `./idwlive-dev_postgres_www.yml` creates a
+network (`iwdlive-dev_common`) with postgres (`db`), redis (`redis`),
+nginx (`www`), frontend (`pwa`) and backend (`api`) containers.
 
-## Nginx (www)
-- Custom image based on nginx:alpine
-- Uses ./www/nginx.conf and ./www/sites-enabled/*
-- ./sites/ is mounted to /var/sites/ in the container
-  (symlink build/ folders in ./sites/ to test builds)
-- Stores cache files to ./cache/
-- Uses SSL certificate from ./www/ssl/
+| iwdlive-db |  |
+|-:|-|
+| image | postgres |
+| ports | 127.0.0.1:5432:5432 |
+| env/conf | postgres.env |
+| **iwdlive-www** |  |
+| image | www/. (nginx:alpine) |
+| ports | 127.0.0.1:80:80 (http)<br>127.0.0.1:443:443 (https) |
+| env/conf | www/nginx.conf<br>www/sites-/\*<br>www/ssl/\*\*/(key\|cert).pem |
+| **iwdlive-redis** |  |
+| image | redis:latest |
+| env/conf | redis.conf |
+| **iwdlive-api** |  |
+| image | ../iwdsync-backend/. (python:3-alpine) |
+| env/conf | ../iwdsync-backend/.env.docker |
+| **iwdlive-pwa** |  |
+| image | ../iwdsync/. (node:lts-alpine) |
+| env/conf | ../iwdsync/.env.docker |
 
 ## manage
-Use `./manage mkcert <DOMAIN>` to generate a SSL certificate, stored in `./www/ssl/<DOMAN>`. This certificate will be valid for `<DOMAIN>` and `*.<DOMAIN>`.
+`./manage init` runs all steps necessary to get a demo started.
+
+Use `./manage mkcert <DOMAIN>` to generate a SSL certificate, stored in `./www/ssl/<DOMAN>`.
+This certificate will be valid for `<DOMAIN>` and `*.<DOMAIN>`.
 
 All other parameters are forwarded to `docker-compose -f ./iwdlive-dev_postgres_www.yml`.
 
 ```bash
 # Bring up containers
 # [-d] detach from your terminal process
-#      a/k/a daemonize
-./manage [-d] up (api|db|pwa|www)
+./manage up [-d] (api|db|pwa|www)
 
-# Bring down (stop and destroy)
-./manage down (api|db|pwa|www)
-
-# Just stop
+# Stop a service
 ./manage stop (api|db|pwa|www)
 
-# Bring up any combination of
-# containers, separately
+# Bring all services down (stop and destroy)
+# This will wipe your DB!
+./manage down
 
 # Execute command inside of running container
 ./manage exec (api|db|pwa|www) <CMD>
@@ -66,6 +76,9 @@ mkcert \
 # or use ./manage
 ./manage mkcert iwdlive.dev
 ```
+
+You can use any other way to generate your cert/key pair. Just copy both .pem
+files somewhere into `./www/ssl/` and reference them in your host config.
 
 The server is already set up for `iwdlive.dev`. The next section describes how
 to add new domains.
@@ -126,15 +139,17 @@ All that's left is to reload the nginx configs
 
 ### Client
 
-*No need to do any of this, if you are using [mkcert](#mkcert) and the installation didn't fail.*
+***No need to do any of this, if you are using [mkcert](#mkcert) and the installation didn't fail.***
 
-Go to your browser settings (e.g. brave://settings/certificates) and add the mkcert `rootCA.pem` to your "Authorities". You can get its location with
+Go to your browser settings (e.g. brave://settings/certificates) and add the mkcert `rootCA.pem`
+to your "Authorities". You can get its location with
 
 ```bash
 mkcert -CAROOT
 ```
 
-When asked, select the "identifying websites" option. The mkcert root certificate - which you use to sign the certificates for domains - is now in the list, named "org-mkcert development CA".
+When asked, select the "identifying websites" option. The mkcert root certificate - which you
+use to sign the certificates for domains - is now in the list, named "org-mkcert development CA".
 From now on, all certificates generated with mkcert are accepted by your browser.
 
 Also have a look at the [advanced topics](https://github.com/FiloSottile/mkcert#advanced-topics) in the mkcert README!
