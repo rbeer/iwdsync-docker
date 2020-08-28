@@ -26,6 +26,9 @@ BUILD_IMAGE_FOR="api pwa www"
 
 # Services to run detached, after successful init
 AUX_SERVICES="db redis www"
+# Domain to set up (used for e.g. SSL certificate)
+# REMEMBER to point this to 127.0.0.1 in your DNS or hosts file!
+CERT_DOMAIN="iwdlive.dev"
 
 function print_init_steps {
   echo "--- iwdlive docker development setup ---"
@@ -33,8 +36,9 @@ function print_init_steps {
   echo "  1. Clone the API service ($GIT_BRANCH branch) to $API_REPO_PATH"
   echo "  2. Clone the PWA service ($GIT_BRANCH branch) to $PWA_REPO_PATH"
   echo "  3. Build images ($BUILD_IMAGE_FOR)"
-  echo "  4. Create the certificate for iwdlive.dev (when mkcert is installed!)"
+  echo "  4. Create the certificate for $CERT_DOMAIN (requires mkcert)"
   echo -e "----------------------------------------"
+  read -p "Key to continue..."
 }
 
 function print_banner_border {
@@ -203,8 +207,8 @@ elif [ "$1" == "init" ]; then
   print_banner "3" "Building images"
   build_images
 
-  print_banner "4" "Creating SSL certificate for iwdlive.dev"
-  make_certificate "iwdlive.dev" "init"
+  print_banner "4" "Creating SSL certificate for $CERT_DOMAIN"
+  make_certificate $CERT_DOMAIN "init"
 
   print_banner "~" "Bringing up auxiliary services ($AUX_SERVICES)"
   up_d_services "$AUX_SERVICES"
@@ -212,6 +216,11 @@ elif [ "$1" == "init" ]; then
   run_api_migrate
 
   print_banner "\\0/" "Done"
+  echo "REMEMBER to point $CERT_DOMAIN to 127.0.0.1 in your DNS or hosts file!"
+  echo "Use ./manage up (api|pwa) to start the dev servers and go to https://$CERT_DOMAIN"
+  echo "Both dev servers reload on file changes in their respective repository:"
+  echo "  api: $API_REPO_PATH"
+  echo "  pwa: $PWA_REPO_PATH"
   exit 0
 elif [ "$1" == "down" ]; then
   echo "The 'down' command stops and destroys all containers. THIS WILL WIPE YOUR DATABASE."
