@@ -204,6 +204,11 @@ elif [ "$1" == "init" ]; then
 
   print_banner "\\0/" "Done"
   exit 0
+elif [ "$1" == "down" ]; then
+  echo "The 'down' command stops and destroys all containers. THIS WILL WIPE YOUR DATABASE."
+  echo "If you just want to stop the services, choose N here and use ./manage stop <services>!"
+  read -p "Proceed with destroying all containers? [y/N] " CONTINUE_DOWN
+  if [ "$CONTINUE_DOWN" != "y" ]; then exit 0; fi
 fi
 
 docker-compose -f $COMPOSE_FILE $@
