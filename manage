@@ -64,6 +64,21 @@ function print_banner {
   print_banner_border $DIVIDER_LENGTH
 }
 
+function print_error {
+  echo -e "$COLOR_FG_RED!! $1$COLOR_RESET"
+}
+
+function print_warning {
+  echo -e "${COLOR_FG_YELLOW}$1$COLOR_RESET"
+}
+
+function bail_on_fail {
+  if [ $1 -ne 0 ]; then
+    print_error "Can't proceed without $2. Please check output above for errors!"
+    exit $1
+  fi
+}
+
 ###
 # 'mkcert' <DOMAIN>
 ###
@@ -172,6 +187,7 @@ function init_pwa_repo {
 ###
 function build_images {
   docker-compose -f $COMPOSE_FILE build $BUILD_IMAGE_FOR
+  bail_on_fail $? "images"
 }
 
 ###
@@ -179,6 +195,7 @@ function build_images {
 ###
 function up_d_services {
   docker-compose -f $COMPOSE_FILE up -d $1
+  bail_on_fail $? "auxiliary services"
 }
 
 ###
@@ -186,6 +203,7 @@ function up_d_services {
 ###
 function run_api_migrate {
   docker-compose -f $COMPOSE_FILE run api python ./manage.py migrate
+  bail_on_fail $? "API migrations"
 }
 
 ###
