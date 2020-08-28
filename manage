@@ -42,10 +42,11 @@ function print_init_steps {
   echo "This script will"
   echo "  1. Clone the API service ($GIT_BRANCH branch) to $API_REPO_PATH"
   echo "  2. Clone the PWA service ($GIT_BRANCH branch) to $PWA_REPO_PATH"
-  echo "  3. Build images ($BUILD_IMAGE_FOR)"
-  echo "  4. Create the certificate for $CERT_DOMAIN (requires mkcert)"
-  echo "  5. Migrate API db schemas"
-  echo "  6. Create a django superuser"
+  echo "  3. Install dependencies"
+  echo "  4. Build images ($BUILD_IMAGE_FOR)"
+  echo "  5. Create the certificate for $CERT_DOMAIN (requires mkcert)"
+  echo "  6. Migrate API db schemas"
+  echo "  7. Create a django superuser"
   echo -e "----------------------------------------"
   read -p "Key to continue..."
 }
@@ -183,6 +184,10 @@ function init_pwa_repo {
   fi
 }
 
+function npm_install {
+  (cd $PWA_REPO_PATH; npm i)
+}
+
 ###
 # 3. Build the images for $BUILD_IMAGE_FOR
 ###
@@ -239,6 +244,7 @@ function create_superuser {
   bail_on_fail $? "superuser"
 }
 
+
 ###
 # iwdlive ./manage
 ###
@@ -263,10 +269,13 @@ elif [ "$1" == "init" ]; then
   print_banner "2" "Cloning PWA"
   init_pwa_repo
 
-  print_banner "3" "Building images"
+  print_banner "3" "Installing npm dependencies"
+  npm_install
+
+  print_banner "4" "Building images"
   build_images
 
-  print_banner "4" "Creating SSL certificate for $CERT_DOMAIN"
+  print_banner "5" "Creating SSL certificate for $CERT_DOMAIN"
   make_certificate $CERT_DOMAIN "init"
 
   print_banner "~" "Bringing up auxiliary services ($AUX_SERVICES)"
@@ -277,10 +286,10 @@ elif [ "$1" == "init" ]; then
   # wait for the DB to accept connections
   await_db
 
-  print_banner "5" "Migrating API schemas"
+  print_banner "6" "Migrating API schemas"
   run_api_migrate
 
-  print_banner "6" "Create django superuser"
+  print_banner "7" "Create django superuser"
   create_superuser
 
   print_banner "\\\0/" "${COLOR_FG_GREEN}Done"
