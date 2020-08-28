@@ -159,7 +159,7 @@ function check_docker_version {
 }
 
 ###
-# 1. Clone the API service
+# Clone the API service
 ###
 function init_api_repo {
   local GIT_DIR_PATH_ABSOLUTE=`realpath $API_REPO_GIT_DIR 2> /dev/null`
@@ -172,7 +172,7 @@ function init_api_repo {
 }
 
 ###
-# 2. Clone the PWA service
+# Clone the PWA service
 ###
 function init_pwa_repo {
   local GIT_DIR_PATH_ABSOLUTE=`realpath $PWA_REPO_GIT_DIR 2> /dev/null`
@@ -184,12 +184,15 @@ function init_pwa_repo {
   fi
 }
 
+###
+# Install PWA dependencies
+###
 function npm_install {
   (cd $PWA_REPO_PATH; npm i)
 }
 
 ###
-# 3. Build the images for $BUILD_IMAGE_FOR
+# Build the images for $BUILD_IMAGE_FOR
 ###
 function build_images {
   docker-compose -f $COMPOSE_FILE build $BUILD_IMAGE_FOR
@@ -204,6 +207,9 @@ function up_d_services {
   bail_on_fail $? "auxiliary services"
 }
 
+###
+# Wait for the db to accept connections
+###
 function await_db {
   local QUERY=1
   local PG_READY_STATUS
@@ -237,6 +243,9 @@ function run_api_migrate {
   bail_on_fail $? "API migrations"
 }
 
+###
+# Create django superuser
+###
 function create_superuser {
   echo "Use this user to log in at https://api.$CERT_DOMAIN/admin"
   echo "Starting api container..."
