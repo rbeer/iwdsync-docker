@@ -117,8 +117,10 @@ function check_docker_daemon {
 
 function check_empty_parent {
   local HAS_MISC_DIRS=0
+  local ABSOLUTE_SELF=`pwd`
+
   for DIR_NAME in ".."/*; do
-    if [ $DIR_NAME != "../docker" ]; then
+    if [ `realpath $DIR_NAME` != $ABSOLUTE_SELF ]; then
       HAS_MISC_DIRS=1
       break
     fi
@@ -128,6 +130,8 @@ function check_empty_parent {
     print_warning "The parent directory is not empty."
     read -p "Proceed with non-empty parent? [y/N] " USE_NON_EMPTY_PARENT
     if [ "$USE_NON_EMPTY_PARENT" != "y" ]; then exit 0; fi
+  else
+    echo -e "${COLOR_FG_GREEN}OK$COLOR_RESET"
   fi
 }
 
@@ -142,7 +146,7 @@ function check_docker_version {
   local DOCKER_VERSION_MINOR=$((${DOCKER_VERSION:3:2}))
 
   echo "  Required: $MIN_VERSION"
-  echo "  Installed: $DOCKER_VERSION"
+  echo -ne "  Installed: "
 
   [ $DOCKER_VERSION_MAJOR -lt $MIN_VERSION_MAJOR ] && \
     CHECK_FAILED=1
@@ -152,10 +156,12 @@ function check_docker_version {
       CHECK_FAILED=1
 
   if [ $CHECK_FAILED -eq 1 ]; then
+    echo -e "$COLOR_FG_RED$DOCKER_VERSION$COLOR_RESET"
     print_error "Please upgrade to or install Docker v$MIN_VERSION or later!"
     exit 1
   fi
-  echo ""
+
+  echo -e "$COLOR_FG_GREEN$DOCKER_VERSION$COLOR_RESET"
 }
 
 ###
