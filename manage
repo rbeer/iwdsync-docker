@@ -31,10 +31,10 @@ AUX_SERVICES="db redis www"
 CERT_DOMAIN="iwdlive.dev"
 
 # other settings
-COLOR_FG_CYAN="\e[38;5;159m"
-COLOR_FG_RED="\e[38;5;196m"
-COLOR_FG_YELLOW="\e[38;5;226m"
-COLOR_FG_GREEN="\e[38;5;46m"
+COLOR_FG_CYAN="\e[1;49;36m"
+COLOR_FG_RED="\e[1;49;31m"
+COLOR_FG_YELLOW="\e[1;49;33m"
+COLOR_FG_GREEN="\e[1;49;32m"
 COLOR_RESET="\e[0m"
 
 function print_init_steps {
@@ -121,6 +121,8 @@ function check_npm {
   [ $NPM_RESULT -ne 0 ] && \
     print_error "Command 'npm' not found. Is in npm in your PATH?"
   bail_on_fail $NPM_RESULT "npm"
+
+  echo -e "${COLOR_FG_GREEN}OK$COLOR_RESET"
 }
 
 function check_empty_parent {
