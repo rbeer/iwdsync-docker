@@ -115,6 +115,14 @@ function check_docker_daemon {
   fi
 }
 
+function check_npm {
+  npm -v &> /dev/null
+  local NPM_RESULT=$?
+  [ $NPM_RESULT -ne 0 ] && \
+    print_error "Command 'npm' not found. Is in npm in your PATH?"
+  bail_on_fail $NPM_RESULT "npm"
+}
+
 function check_empty_parent {
   local HAS_MISC_DIRS=0
   local ABSOLUTE_SELF=`pwd`
@@ -222,8 +230,9 @@ function await_db {
 
   while true; do
     sleep $(($QUERY * 1))
-    echo -n "[$QUERY/∞] pg_ready: "
+    echo -n "[$QUERY/∞] pg_isready: "
     PG_READY_OUT=`docker-compose -f $COMPOSE_FILE exec db pg_isready 2>&1`
+    echo $PG_READY_OUT
     PG_READY_STATUS=${PG_READY_OUT:$((${#PG_READY_OUT} - 22)):21}
     if [ "$PG_READY_STATUS" == "accepting connections" ]; then
       echo $PG_READY_STATUS
@@ -277,6 +286,9 @@ elif [ "$1" == "init" ]; then
 
   print_banner "?" "Checking Docker version"
   check_docker_version
+
+  print_banner "?" "Checking for NPM"
+  check_npm
 
   print_banner "1" "Cloning API"
   init_api_repo
