@@ -145,6 +145,36 @@ function check_empty_parent {
   fi
 }
 
+function check_docker_compose_version {
+  local CHECK_FAILED=0
+  local COMPOSE_MIN_VERSION_MAJOR=1
+  local COMPOSE_MIN_VERSION_MINOR=25
+  local COMPOSE_MIN_VERSION="$COMPOSE_MIN_VERSION_MAJOR.$COMPOSE_MIN_VERSION_MINOR"
+
+  local COMPOSE_VERSION=`docker-compose version --short`
+  local COMPOSE_VERSION_MAJOR=$((${COMPOSE_VERSION:0:1}))
+  local COMPOSE_VERSION_MINOR=$((${COMPOSE_VERSION:2:2}))
+
+  echo "docker-compose"
+  echo "  Required: $COMPOSE_MIN_VERSION"
+  echo -ne "  Installed: "
+
+  [ $COMPOSE_VERSION_MAJOR -lt $COMPOSE_MIN_VERSION_MAJOR ] && \
+    CHECK_FAILED=1
+
+  [ $COMPOSE_VERSION_MAJOR -eq $COMPOSE_MIN_VERSION_MAJOR ] && \
+    [ $COMPOSE_VERSION_MINOR -lt $COMPOSE_MIN_VERSION_MINOR ] && \
+      CHECK_FAILED=1
+
+  if [ $CHECK_FAILED -eq 1 ]; then
+    echo -e "$COLOR_FG_RED$COMPOSE_VERSION$COLOR_RESET"
+    print_error "Please upgrade to or install docker-compose v$COMPOSE_MIN_VERSION or later!"
+    exit 1
+  fi
+
+  echo -e "$COLOR_FG_GREEN$COMPOSE_VERSION$COLOR_RESET"
+}
+
 function check_docker_version {
   local CHECK_FAILED=0
   local MIN_VERSION_MAJOR=18
@@ -155,6 +185,7 @@ function check_docker_version {
   local DOCKER_VERSION_MAJOR=$((${DOCKER_VERSION:0:2}))
   local DOCKER_VERSION_MINOR=$((${DOCKER_VERSION:3:2}))
 
+  echo "Docker"
   echo "  Required: $MIN_VERSION"
   echo -ne "  Installed: "
 
@@ -286,8 +317,9 @@ elif [ "$1" == "init" ]; then
   print_banner "?" "Checking parent directory"
   check_empty_parent
 
-  print_banner "?" "Checking Docker version"
+  print_banner "?" "Checking Docker versions"
   check_docker_version
+  check_docker_compose_version
 
   print_banner "?" "Checking for NPM"
   check_npm
