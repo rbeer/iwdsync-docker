@@ -259,27 +259,30 @@ function up_d_services {
 ###
 function await_db {
   local QUERY=1
+  local DB_READY=0
   local PG_READY_STATUS
 
-  while true; do
-    sleep $(($QUERY * 1))
+  while [ $DB_READY -eq 0 ]; do
     echo -n "[$QUERY/∞] pg_isready: "
+
     PG_READY_OUT=`docker-compose -f $COMPOSE_FILE exec db pg_isready 2>&1`
-    echo $PG_READY_OUT
-    PG_READY_STATUS=${PG_READY_OUT:$((${#PG_READY_OUT} - 22)):21}
-    if [ "$PG_READY_STATUS" == "accepting connections" ]; then
-      echo $PG_READY_STATUS
-      break
-    else
-      PG_READY_STATUS=${PG_READY_OUT:0:18}
-      if [ "$PG_READY_STATUS" == "No container found" ]; then
-        print_error "The database container isn't running"
-      else
-        echo "no response"
-      fi
-      [ $QUERY -eq 10 ] && print_warning "This runs indefinitely, btw."
-      QUERY=$(($QUERY + 1))
-    fi
+    PG_STATUS=`echo $PG_READY_OUT | egrep -o '(accepting connections|no response|No container found)'`
+
+    echo $PG_STATUS
+
+    case $PG_STATUS in
+      "accepting connections")
+        DB_READY=1;;
+      "No container found")
+	print_error "The database container isn't running";;
+      "no response")
+        ;;
+      *)
+	print_error "Unexpected response from DB. Please check output above for errors!"
+    esac
+    [ $QUERY -eq 10 ] && print_warning "This runs indefinitely, btw."
+    sleep $(($QUERY * 1))
+    QUERY=$(($QUERY + 1))
   done
 }
 
