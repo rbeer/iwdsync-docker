@@ -1,7 +1,7 @@
 # iwdlive.dev
 
 ***Quickstart:***
-*[Install mkcert](https://github.com/FiloSottile/mkcert#installation) and run `./manage init`*
+*[Install mkcert](https://github.com/FiloSottile/mkcert#installation), [node.js](https://nodejs.org/en/download/) and run `./manage init`*
 
 ---
 The compose file `./idwlive-dev_postgres_www.yml` creates a

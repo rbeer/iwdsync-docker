@@ -48,7 +48,7 @@ services:
     build: ../iwdsync-backend/.
     container_name: iwdlive-api
     hostname: iwdlive-api
-    command: uvicorn iwdsync.asgi:application --reload --host iwdlive-api
+    command: uvicorn iwdsync.asgi:application --reload-dir /app --host iwdlive-api
     stdin_open: true
     expose:
       - "8000"
